@@ -13,17 +13,24 @@ const (
 )
 
 type CommonUnit struct {
-	value int
+	totalSize int64
+	value     int
 }
 
 func NewCommonUnit(value int) *CommonUnit {
 	return &CommonUnit{
-		value: value,
+		totalSize: 0,
+		value:     value,
 	}
 }
 
+func (c *CommonUnit) TotalSize() int64 {
+	return c.totalSize
+}
+
 func (c *CommonUnit) Compute(quantity int) int64 {
-	return int64(c.value * quantity)
+	c.totalSize += int64(c.value * quantity)
+	return c.totalSize
 }
 
 type GramUnit struct {
@@ -34,8 +41,8 @@ func NewGramUnit(value int) *GramUnit {
 	return &GramUnit{CommonUnit: NewCommonUnit(value)}
 }
 
-func (g *GramUnit) ToString(totalSize int64) string {
-	grams := big.NewRat(totalSize, 1)                  // g.size — например, 1234
+func (g *GramUnit) ToString() string {
+	grams := big.NewRat(g.TotalSize(), 1)              // g.size — например, 1234
 	kg := new(big.Rat).Quo(grams, big.NewRat(1000, 1)) // делим точно
 	return fmt.Sprintf("%s кг.", kg.FloatString(3))    // 3 знака после запятой
 }
@@ -52,8 +59,8 @@ func NewPieceUnit(value int) *PieceUnit {
 	return &PieceUnit{CommonUnit: NewCommonUnit(value)}
 }
 
-func (p *PieceUnit) ToString(totalSize int64) string {
-	return fmt.Sprintf("%d шт.", totalSize)
+func (p *PieceUnit) ToString() string {
+	return fmt.Sprintf("%d шт.", p.TotalSize())
 }
 
 func (p *PieceUnit) Code() string {

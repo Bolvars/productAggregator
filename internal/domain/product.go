@@ -1,24 +1,25 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 type Uniter interface {
 	Compute(int) int64
 	Code() string
-	ToString(totalSize int64) string
+	ToString() string
 }
 
 type Product struct {
-	totalSize int64
-	unit      Uniter
-	name      string
+	name    string
+	uniters map[string]Uniter
 }
 
-func NewProduct(name string, unit Uniter) *Product {
+func NewProduct(name string) *Product {
 	return &Product{
-		name:      name,
-		unit:      unit,
-		totalSize: int64(0),
+		name:    name,
+		uniters: make(map[string]Uniter),
 	}
 }
 
@@ -27,30 +28,40 @@ func (p *Product) Name() string {
 }
 
 func (p *Product) ToString() string {
-	return p.unit.ToString(p.totalSize)
+	units := make([]string, 0, len(p.uniters))
+	for _, unit := range p.uniters {
+		units = append(units, unit.ToString())
+	}
+	return strings.Join(units, ", ")
 }
 
-func (p *Product) Uniter() Uniter {
-	return p.unit
+func (p *Product) Uniters() map[string]Uniter {
+	return p.uniters
 }
 
-func (p *Product) Compute(quantity int) int64 {
-	p.totalSize = p.unit.Compute(quantity)
-	return p.totalSize
+func (p *Product) Compute(uniter Uniter, quantity int) int64 {
+	u, ok := p.uniters[uniter.Code()]
+	if !ok {
+		u = uniter
+		p.uniters[uniter.Code()] = uniter
+	}
+
+	return u.Compute(quantity)
 }
 
-func (p *Product) TotalSize() int64 {
-	return p.totalSize
+func (p *Product) AddUniters(uniters map[string]Uniter) {
+	for _, uniter := range uniters {
+		_, ok := p.uniters[uniter.Code()]
+		if !ok {
+			p.uniters[uniter.Code()] = uniter
+		}
+	}
 }
 
 func (p *Product) AddProduct(someProduct *Product) error {
 	if p.name != someProduct.name {
 		return errors.New("name is not equal")
 	}
-	if p.unit.Code() != someProduct.unit.Code() {
-		return errors.New("unit code is not equal")
-	}
-
-	p.totalSize += someProduct.totalSize
+	p.AddUniters(someProduct.uniters)
 	return nil
 }
