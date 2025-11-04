@@ -34,5 +34,4 @@ USER botuser
 ENV TOKEN=""
 
 # Запускаем бота
-ENTRYPOINT ["/app/bot"]
-CMD ["-token=${TOKEN}"]
+CMD sh -c "/app/bot -token=${TOKEN}"
