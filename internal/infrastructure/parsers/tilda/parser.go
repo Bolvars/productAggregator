@@ -2,6 +2,7 @@ package tilda
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"productsParser/internal/domain"
 	"regexp"
@@ -13,8 +14,9 @@ const (
 	pcStr       = "pc"
 	pcRuStr     = "шт."
 	gramStr     = "гр."
-	kgStr       = "кг."
-	rePcStr     = `^\d+\.\s*(.+?),\s*pc:\s*[\d\.,]+\s*\((\d+)\s*pc\s*x[\d\s\.,]+?\)`
+	kgStrRu     = "кг."
+	kgStr       = "kg"
+	rePcStr     = `^\d+\.\s*(.+?),.*\(\s*(\d+)\s*([a-zA-Z]+)`
 	reWeightstr = `^\d+\.\s*(.+?):\s*[\d\.,]+\s*\(([\d\s\w]+?)x[\d\s\.,]+?\)\s*Вес:\s*(\d+)\s*(\S+)`
 	reOrderStr  = `Order\s+#(\d+)`
 )
@@ -28,8 +30,9 @@ var (
 var unitInit = map[string]func(value int) domain.Uniter{
 	pcStr:   func(value int) domain.Uniter { return domain.NewPieceUnit(value) },
 	pcRuStr: func(value int) domain.Uniter { return domain.NewPieceUnit(value) },
-	kgStr:   func(value int) domain.Uniter { return domain.NewGramUnit(value) },
+	kgStr:   func(value int) domain.Uniter { return domain.NewGramUnit(1000) },
 	gramStr: func(value int) domain.Uniter { return domain.NewGramUnit(value) },
+	kgStrRu: func(value int) domain.Uniter { return domain.NewGramUnit(value) },
 }
 
 type Parser struct {
@@ -99,7 +102,8 @@ func (p *Parser) pareseProduct(str string) (*domain.Product, error) {
 	if m := rePc.FindStringSubmatch(str); m != nil {
 		name := strings.TrimSpace(m[1])
 		qty := parseInt(m[2])
-		return p.validProduct(name, pcStr, qty, 1)
+		pc := strings.TrimSpace(m[3])
+		return p.validProduct(name, pc, qty, 1)
 	}
 
 	return nil, io.EOF
@@ -120,10 +124,10 @@ func (p *Parser) validProduct(name, unit string, qty, weight int) (*domain.Produ
 
 	unitInitFunc, ok := unitInit[unit]
 	if !ok {
-		return nil, errors.New("parse error: unknown unit")
+		return nil, fmt.Errorf("parse error: unknown unit %s", unit)
 	}
 
-	product := domain.NewProduct(name, unitInitFunc(weight))
-	product.Compute(qty)
+	product := domain.NewProduct(name)
+	product.Compute(unitInitFunc(weight), qty)
 	return product, nil
 }

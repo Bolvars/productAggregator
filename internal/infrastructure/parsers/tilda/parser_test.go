@@ -70,11 +70,11 @@ func TestParseMessage(t *testing.T) {
 			name:    "Test Parse all",
 			message: []byte(messageTest1),
 			order: domain.NewOrder("1898307952", []*domain.Product{
-				domain.NewProduct("Огурец среднеплодный", domain.NewGramUnit(1000)),
-				domain.NewProduct("Томат красный", domain.NewGramUnit(1000)),
-				domain.NewProduct("Перец чили красный", domain.NewGramUnit(1)),
-				domain.NewProduct("Салат Афицион", domain.NewPieceUnit(1)),
-				domain.NewProduct("Авокадо", domain.NewGramUnit(1000)),
+				domain.NewProduct("Огурец среднеплодный"),
+				domain.NewProduct("Томат красный"),
+				domain.NewProduct("Перец чили красный"),
+				domain.NewProduct("Салат Афицион"),
+				domain.NewProduct("Авокадо"),
 			}),
 			err: nil,
 		},
@@ -82,31 +82,31 @@ func TestParseMessage(t *testing.T) {
 			name:    "Parse order 1024598132",
 			message: []byte(messageTest2),
 			order: domain.NewOrder("1024598132", []*domain.Product{
-				domain.NewProduct("Баклажан", domain.NewGramUnit(1000)),
-				domain.NewProduct("Петрушка", domain.NewGramUnit(1)),
-				domain.NewProduct("Картофель желтый", domain.NewGramUnit(1000)),
-				domain.NewProduct("Морковь", domain.NewGramUnit(1000)),
-				domain.NewProduct("Лук репчатый новый урожай", domain.NewGramUnit(1000)),
-				domain.NewProduct("Салат Ромейн", domain.NewGramUnit(1)),
-				domain.NewProduct("Орех пекан очищенный", domain.NewGramUnit(1000)),
+				domain.NewProduct("Баклажан"),
+				domain.NewProduct("Петрушка"),
+				domain.NewProduct("Картофель желтый"),
+				domain.NewProduct("Морковь"),
+				domain.NewProduct("Лук репчатый новый урожай"),
+				domain.NewProduct("Салат Ромейн"),
+				domain.NewProduct("Орех пекан очищенный"),
 			}),
 			err: nil,
 		},
 	}
 
-	tests[0].order.Products()[0].Compute(7)
-	tests[0].order.Products()[1].Compute(1)
-	tests[0].order.Products()[2].Compute(100)
-	tests[0].order.Products()[3].Compute(1)
-	tests[0].order.Products()[4].Compute(1)
+	tests[0].order.Products()[0].Compute(domain.NewGramUnit(1000), 7)
+	tests[0].order.Products()[1].Compute(domain.NewGramUnit(1000), 1)
+	tests[0].order.Products()[2].Compute(domain.NewGramUnit(1), 100)
+	tests[0].order.Products()[3].Compute(domain.NewPieceUnit(1), 1)
+	tests[0].order.Products()[4].Compute(domain.NewGramUnit(1000), 1)
 
-	tests[1].order.Products()[0].Compute(3)
-	tests[1].order.Products()[1].Compute(3)
-	tests[1].order.Products()[2].Compute(5)
-	tests[1].order.Products()[3].Compute(4)
-	tests[1].order.Products()[4].Compute(3)
-	tests[1].order.Products()[5].Compute(4)
-	tests[1].order.Products()[6].Compute(1)
+	tests[1].order.Products()[0].Compute(domain.NewGramUnit(1000), 3)
+	tests[1].order.Products()[1].Compute(domain.NewGramUnit(1), 3)
+	tests[1].order.Products()[2].Compute(domain.NewGramUnit(1000), 5)
+	tests[1].order.Products()[3].Compute(domain.NewGramUnit(1000), 4)
+	tests[1].order.Products()[4].Compute(domain.NewGramUnit(1000), 3)
+	tests[1].order.Products()[5].Compute(domain.NewGramUnit(1), 4)
+	tests[1].order.Products()[6].Compute(domain.NewGramUnit(1000), 1)
 
 	p := tilda.New()
 	for _, tt := range tests {
@@ -114,7 +114,7 @@ func TestParseMessage(t *testing.T) {
 			order, err := p.ParseOrder(tt.message)
 			assert.Equal(t, err, tt.err)
 			for _, p := range order.Products() {
-				log.Println(order.Id(), p.Name(), p.TotalSize())
+				log.Println(order.Id(), p.Name())
 			}
 			assert.Equal(t, order, tt.order)
 		})
