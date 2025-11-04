@@ -71,6 +71,5 @@ func (os *OrdersService) aggrProduct(product *domain.Product) error {
 		return err
 	}
 
-	os.aggr[product.Name()] = aggrProdutct
 	return nil
 }

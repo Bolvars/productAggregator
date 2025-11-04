@@ -33,6 +33,11 @@ func (c *CommonUnit) Compute(quantity int) int64 {
 	return c.totalSize
 }
 
+func (c *CommonUnit) Add(totalSize int64) int64 {
+	c.totalSize += totalSize
+	return c.totalSize
+}
+
 type GramUnit struct {
 	*CommonUnit
 }

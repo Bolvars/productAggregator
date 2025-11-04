@@ -7,6 +7,8 @@ import (
 
 type Uniter interface {
 	Compute(int) int64
+	Add(int64) int64
+	TotalSize() int64
 	Code() string
 	ToString() string
 }
@@ -54,6 +56,10 @@ func (p *Product) AddUniters(uniters map[string]Uniter) {
 		_, ok := p.uniters[uniter.Code()]
 		if !ok {
 			p.uniters[uniter.Code()] = uniter
+		}
+
+		if ok {
+			p.uniters[uniter.Code()].Add(uniter.TotalSize())
 		}
 	}
 }
