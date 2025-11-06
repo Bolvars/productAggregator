@@ -7,7 +7,7 @@ import (
 	"log"
 	"productsParser/internal/application/telegrambot"
 	"productsParser/internal/config"
-	"productsParser/internal/service"
+	service "productsParser/internal/service/users"
 
 	"github.com/go-telegram/bot"
 	"golang.org/x/sync/errgroup"

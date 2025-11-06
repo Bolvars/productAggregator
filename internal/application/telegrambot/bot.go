@@ -3,13 +3,15 @@ package telegrambot
 import (
 	"context"
 	"fmt"
-	"productsParser/internal/service"
+	service "productsParser/internal/service/users"
 	"strconv"
 	"strings"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 )
+
+const correctResponse = "Заказ #%s успешно сохранен. Чтобы выполнить расчёт, нажмите «Calc». Если хотите еще и отсортировать результат в алфавитном порядке, нажмите «CalcAndSort»."
 
 const aboutBot = `👋 Привет! Я бот для обработки заказов. Пока что я умею обрабатывать только текст заказа из Tilda.
 
@@ -48,6 +50,7 @@ func NewBot(token string, uService *service.UserService) (*bot.Bot, error) {
 		bot.WithMessageTextHandler("/help", bot.MatchTypeExact, bt.handleHelpCommand),
 		bot.WithMessageTextHandler("/start", bot.MatchTypeExact, bt.handleStartCommand),
 		bot.WithMessageTextHandler("/calc", bot.MatchTypeExact, bt.handleCalculate),
+		bot.WithMessageTextHandler("/calcAndSort", bot.MatchTypeExact, bt.handleCalculateAndSort),
 		bot.WithDefaultHandler(bt.handleTextMessage),
 	)
 	if err != nil {
@@ -90,12 +93,13 @@ func (bt *Bot) handleTextMessage(ctx context.Context, b *bot.Bot, update *models
 		menu = &models.ReplyKeyboardMarkup{
 			Keyboard: [][]models.KeyboardButton{
 				{{Text: "/calc"}},
+				{{Text: "/calcAndSort"}},
 			},
 			ResizeKeyboard: true, // чтобы не занимала полэкрана
 		}
 	}
 	message.ReplyMarkup = menu
-	message.Text = fmt.Sprintf("Заказ #%s успешно сохранен. Чтобы выполнить расчёт, нажмите «Рассчитать».", order.Id())
+	message.Text = fmt.Sprintf(correctResponse, order.Id())
 	b.SendMessage(ctx, message)
 }
 
@@ -119,7 +123,7 @@ func (bt *Bot) handleCalculate(ctx context.Context, b *bot.Bot, update *models.U
 	}
 
 	defer bt.userService.DelUser(id)
-	products, err := curUser.Compute()
+	productService, err := curUser.Compute()
 	if err != nil {
 		message.Text = "Не удалось произвести расчёт: " + err.Error()
 		b.SendMessage(ctx, message)
@@ -127,7 +131,44 @@ func (bt *Bot) handleCalculate(ctx context.Context, b *bot.Bot, update *models.U
 	}
 
 	builder := strings.Builder{}
-	for i, product := range products {
+	for i, product := range productService.Products() {
+		builder.WriteString(fmt.Sprintf("%d. ", i+1) + product.Name() + ": ")
+		builder.WriteString(product.ToString() + "\n")
+	}
+	message.Text = "Результаты расчётов:\n" + builder.String()
+	b.SendMessage(ctx, message)
+
+}
+
+func (bt *Bot) handleCalculateAndSort(ctx context.Context, b *bot.Bot, update *models.Update) {
+
+	userID := update.Message.From.ID
+	id := strconv.FormatInt(userID, 10)
+	curUser, exist := bt.userService.GetUserService(id)
+
+	menu := &models.ReplyKeyboardRemove{
+		RemoveKeyboard: true,
+	}
+	message := &bot.SendMessageParams{
+		ChatID:      userID,
+		ReplyMarkup: menu,
+	}
+	if !exist {
+		message.Text = "Пользователь не добавил заказы для расчета"
+		b.SendMessage(ctx, message)
+		return
+	}
+
+	defer bt.userService.DelUser(id)
+	productService, err := curUser.Compute()
+	if err != nil {
+		message.Text = "Не удалось произвести расчёт: " + err.Error()
+		b.SendMessage(ctx, message)
+		return
+	}
+
+	builder := strings.Builder{}
+	for i, product := range productService.ProductsSortByName() {
 		builder.WriteString(fmt.Sprintf("%d. ", i+1) + product.Name() + ": ")
 		builder.WriteString(product.ToString() + "\n")
 	}

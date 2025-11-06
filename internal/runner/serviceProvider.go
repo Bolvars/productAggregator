@@ -2,13 +2,13 @@ package runner
 
 import (
 	"productsParser/internal/config"
+	i "productsParser/internal/domain/interface"
 	"productsParser/internal/infrastructure/parsers/tilda"
-	"productsParser/internal/service"
 )
 
 type serviceProvider struct {
 	config config.TgConfig
-	parser func() service.Parser
+	parser func() i.Parser
 }
 
 func newServiceProvider(config config.TgConfig) *serviceProvider {
@@ -21,9 +21,9 @@ func (s *serviceProvider) Config() config.TgConfig {
 	return s.config
 }
 
-func (s *serviceProvider) ParserInit() func() service.Parser {
+func (s *serviceProvider) ParserInit() func() i.Parser {
 	if s.parser == nil {
-		s.parser = func() service.Parser {
+		s.parser = func() i.Parser {
 			return tilda.New()
 		}
 	}
