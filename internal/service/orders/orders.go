@@ -3,13 +3,10 @@ package service
 import (
 	"errors"
 	"productsParser/internal/domain"
+	i "productsParser/internal/domain/interface"
 	service "productsParser/internal/service/product"
 	"sync"
 )
-
-type Parser interface {
-	ParseOrder([]byte) (*domain.Order, error)
-}
 
 type Orders struct {
 	rw     *sync.RWMutex
@@ -17,10 +14,10 @@ type Orders struct {
 	aggr   map[string]*domain.Product
 	result []*domain.Product
 	orders map[string]*domain.Order
-	p      Parser
+	p      i.Parser
 }
 
-func NewOrderService(user *domain.User, p Parser) *Orders {
+func NewOrderService(user *domain.User, p i.Parser) *Orders {
 	return &Orders{
 		user:   user,
 		aggr:   make(map[string]*domain.Product),

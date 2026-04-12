@@ -5,20 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"productsParser/internal/application/maxbot"
 	"productsParser/internal/application/telegrambot"
 	"productsParser/internal/config"
 	service "productsParser/internal/service/users"
 
-	"github.com/go-telegram/bot"
 	"golang.org/x/sync/errgroup"
 )
+
+type Bot interface {
+	Start(ctx context.Context)
+}
 
 // Структура, реализующая запуск бинаринка
 type GatewayApp struct {
 	serviceProvider *serviceProvider
 	config          config.TgConfig
 
-	b   *bot.Bot
+	b Bot
+
 	g   *errgroup.Group
 	ctx context.Context
 }
@@ -48,13 +53,14 @@ func (a *GatewayApp) Run(ctx context.Context) error {
 	if err := a.g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("server exited with error: %w", err)
 	}
+	log.Println("Shutdown done")
 	return nil
 }
 
 func (a *GatewayApp) initDeps(ctx context.Context) error {
 	inits := []func(ctx2 context.Context) error{
 		a.initServiceProvider,
-		a.initTgBot,
+		a.initBot,
 	}
 
 	for _, f := range inits {
@@ -71,12 +77,24 @@ func (a *GatewayApp) initServiceProvider(_ context.Context) error {
 	return nil
 }
 
-func (a *GatewayApp) initTgBot(_ context.Context) error {
+func (a *GatewayApp) initBot(_ context.Context) error {
 	userService := service.NewUserService(a.serviceProvider.ParserInit())
-	b, err := telegrambot.NewBot(a.serviceProvider.Config().Token(), userService)
-	if err != nil {
-		return err
+	var (
+		b   Bot
+		err error
+	)
+	if a.config.TgBotEnabled() {
+		b, err = telegrambot.NewBot(a.serviceProvider.Config().Token(), userService)
+		if err != nil {
+			return err
+		}
+	} else {
+		b, err = maxbot.NewBot(a.serviceProvider.Config().Token(), userService)
+		if err != nil {
+			return err
+		}
 	}
+
 	a.b = b
 	return nil
 }
@@ -87,12 +105,6 @@ func (a *GatewayApp) runServers(ctx context.Context) {
 			log.Println("Bot was started")
 			a.b.Start(ctx)
 		}
-		return nil
-	})
-
-	a.g.Go(func() error {
-		<-ctx.Done()
-		log.Println("Shutdown done")
 		return nil
 	})
 }

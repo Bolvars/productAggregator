@@ -12,14 +12,15 @@ import (
 )
 
 func main() {
-	token := flag.String("token", "", "tg token")
+	token := flag.String("token", "", "token")
+	isTg := flag.Bool("isTg", false, "is tgbot or maxbot")
 	timeout := flag.Duration("httpTimeout", time.Minute*2, "Таймаут HTTP соединений")
 
 	flag.Parse()
 
-	cfg := config.NewGlobalConfig(true, *token, *timeout, true)
+	cfg := config.NewGlobalConfig(*isTg, *token, *timeout, true)
 
-	gatewayApp, err := runner.NewApp(context.TODO(), cfg)
+	gatewayApp, err := runner.NewApp(context.Background(), cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,7 +31,6 @@ func main() {
 		ctx,
 		syscall.SIGTERM,
 		syscall.SIGINT,
-		syscall.SIGKILL,
 		syscall.SIGTSTP,
 		syscall.SIGHUP,
 		syscall.SIGQUIT,

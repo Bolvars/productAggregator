@@ -18,14 +18,12 @@ func NewService(products []*domain.Product) *Products {
 	}
 }
 
-func (ps *Products) ProductsSortByName() []*domain.Product {
-	collator := collate.New(language.Russian, collate.IgnoreCase)
-	sort.Slice(ps.p, func(i, j int) bool {
-		return collator.CompareString(ps.p[i].Name(), ps.p[j].Name()) < 0
-	})
-	return ps.p
-}
-
-func (ps *Products) Products() []*domain.Product {
+func (ps *Products) Products(sorted bool) []*domain.Product {
+	if sorted {
+		collator := collate.New(language.Russian, collate.IgnoreCase)
+		sort.Slice(ps.p, func(i, j int) bool {
+			return collator.CompareString(ps.p[i].Name(), ps.p[j].Name()) < 0
+		})
+	}
 	return ps.p
 }
