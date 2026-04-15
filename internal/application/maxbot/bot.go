@@ -70,23 +70,27 @@ func (bt *Bot) handleStartCommand(ctx context.Context, msg *schemes.MessageCreat
 func (bt *Bot) handleTextMessage(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
 	chatId := msg.GetChatID()
 
-	ok, txtResp, err := bt.cmn.AddOrder(ctx, strconv.FormatInt(msg.GetUserID(), 10), msg.GetText())
+	var txt string
+	if msg.Message.Link != nil {
+		txt = msg.Message.Link.Message.Text
+	} else {
+		txt = msg.GetText()
+	}
+	_, txtResp, err := bt.cmn.AddOrder(ctx, strconv.FormatInt(msg.GetUserID(), 10), txt)
 	if err != nil {
 		return bt.api.Messages.Send(ctx, maxbot.NewMessage().SetChat(chatId).SetText(err.Error()))
 	}
 	var message *maxbot.Message
-	if !ok {
-		keyboard := bt.api.Messages.NewKeyboardBuilder()
-		keyboard.AddRow().
-			AddMessage(common.HandleNameCalc).
-			AddMessage(common.HandleNameCalcAndSort)
-		message = maxbot.NewMessage().
-			SetChat(chatId).
-			AddKeyboard(keyboard).
-			SetText(txtResp)
-	} else {
-		message = maxbot.NewMessage().SetChat(chatId).SetText(txtResp)
-	}
+
+	keyboard := bt.api.Messages.NewKeyboardBuilder()
+	keyboard.AddRow().
+		AddMessage(common.HandleNameCalc).
+		AddMessage(common.HandleNameCalcAndSort)
+	message = maxbot.NewMessage().
+		SetChat(chatId).
+		AddKeyboard(keyboard).
+		SetText(txtResp)
+
 	return bt.api.Messages.Send(ctx, message)
 }
 
