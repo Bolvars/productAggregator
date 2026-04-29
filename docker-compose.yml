@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  # Наш бот
+  bot:
+    build: .
+    restart: always
+    environment:
+      - TOKEN=твой_max_bot_token
+      - SECRET=твой_секретный_ключ_для_webhook
+      - HOST=https://duckdns.org
+    command: ["-isTg=false", "-isWebhook=true", "-httpTimeout=2m"]
+    networks:
+      - bot_network
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - bot_network
+
+networks:
+  bot_network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
