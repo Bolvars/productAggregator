@@ -3,6 +3,7 @@ package webhook
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"productsParser/internal/application/maxbot/common"
@@ -11,11 +12,13 @@ import (
 	"time"
 
 	"github.com/max-messenger/max-bot-api-client-go/schemes"
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
 type Bot struct {
 	*common.CommonBot
-	server *http.Server
+	server *fasthttp.Server
 	secret string
 	host   string
 }
@@ -48,41 +51,49 @@ func (bt *Bot) Start(ctx context.Context) {
 	}
 	log.Printf("Webhook registered: %s", webhookURL)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/webhook", bt.Api().GetUpdateHandler(updateChan, bt.secret))
+	fastHandler := fasthttpadaptor.NewFastHTTPHandlerFunc(bt.Api().GetUpdateHandler(updateChan, bt.secret))
 
-	bt.server = &http.Server{
-		Addr:    ":10888",
-		Handler: mux,
+	requestHandler := func(ctx *fasthttp.RequestCtx) {
+		switch string(ctx.Path()) {
+		case "/webhook":
+			fastHandler(ctx)
+		default:
+			ctx.Error("Not Found", fasthttp.StatusNotFound)
+		}
 	}
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case upd := <-updateChan:
-				bt.Handle(ctx, upd)
-			}
-		}
-	}()
+	bt.server = &fasthttp.Server{
+		Handler: requestHandler,
+	}
 
 	log.Println("Starting Webhook server on :10888")
 	go func() {
-		if err := bt.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := bt.server.ListenAndServe(":10888"); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	<-ctx.Done()
-	bt.stop()
+	for {
+		select {
+		case <-ctx.Done():
+			bt.stop()
+			return
+		case upd := <-updateChan:
+			bt.Handle(ctx, upd)
+		}
+	}
+
+}
+
+func requestHandler(ctx *fasthttp.RequestCtx) {
+	fmt.Fprintf(ctx, "Hello, world! Requested path is %q", ctx.Path())
 }
 
 func (bt *Bot) stop() {
 	if bt.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		bt.server.Shutdown(ctx)
+		bt.server.ShutdownWithContext(ctx)
 		log.Println("Webhook server stopped")
 	}
 }
