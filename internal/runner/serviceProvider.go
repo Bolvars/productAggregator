@@ -7,17 +7,17 @@ import (
 )
 
 type serviceProvider struct {
-	config config.TgConfig
+	config config.Config
 	parser func() i.Parser
 }
 
-func newServiceProvider(config config.TgConfig) *serviceProvider {
+func newServiceProvider(config config.Config) *serviceProvider {
 	return &serviceProvider{
 		config: config,
 	}
 }
 
-func (s *serviceProvider) Config() config.TgConfig {
+func (s *serviceProvider) Config() config.Config {
 	return s.config
 }
 

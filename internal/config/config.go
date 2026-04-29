@@ -2,46 +2,66 @@ package config
 
 import "time"
 
-type TgConfig interface {
+type Config interface {
 	TgBotEnabled() bool
 	Token() string
+	Secret() string
+	IsWebhook() bool
+	Host() string
 	InterruptTimeout() time.Duration
 	IsTildaParser() bool
 }
 
-type tgConfig struct {
+type GlobalConfig struct {
 	tgBotEnabled       bool
+	isWebhook          bool
 	token              string
+	secret             string
+	host               string
 	interruptTimeout   time.Duration
 	tildaParserEnabled bool
 }
 
 func NewGlobalConfig(
-	tgEnabled bool,
-	token string,
+	tgEnabled, isWebhook bool,
+	token, secret, host string,
 	timeout time.Duration,
 	tildaParser bool,
-) TgConfig {
-	return &tgConfig{
+) Config {
+	return &GlobalConfig{
 		tgBotEnabled:       tgEnabled,
+		isWebhook:          isWebhook,
+		secret:             secret,
 		token:              token,
+		host:               host,
 		interruptTimeout:   timeout,
 		tildaParserEnabled: tildaParser,
 	}
 }
 
-func (c *tgConfig) TgBotEnabled() bool {
+func (c *GlobalConfig) TgBotEnabled() bool {
 	return c.tgBotEnabled
 }
 
-func (c *tgConfig) Token() string {
+func (c *GlobalConfig) Token() string {
 	return c.token
 }
 
-func (c *tgConfig) InterruptTimeout() time.Duration {
+func (c *GlobalConfig) InterruptTimeout() time.Duration {
 	return c.interruptTimeout
 }
 
-func (c *tgConfig) IsTildaParser() bool {
+func (c *GlobalConfig) IsTildaParser() bool {
 	return c.tildaParserEnabled
+}
+
+func (c *GlobalConfig) IsWebhook() bool {
+	return c.isWebhook
+}
+func (c *GlobalConfig) Secret() string {
+	return c.secret
+}
+
+func (c *GlobalConfig) Host() string {
+	return c.host
 }

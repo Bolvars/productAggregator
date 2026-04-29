@@ -1,4 +1,4 @@
-package maxbot
+package common
 
 import (
 	"context"
@@ -11,14 +11,18 @@ import (
 	"github.com/max-messenger/max-bot-api-client-go/schemes"
 )
 
-type Bot struct {
+const (
+	WebhookHandle = "/webhook"
+)
+
+type CommonBot struct {
 	api      *maxbot.Api
 	commands map[string]func(context.Context, *schemes.MessageCreatedUpdate) error
 	cmn      *common.Common
 }
 
-func NewBot(token string, uService *service.UserService) (*Bot, error) {
-	bt := &Bot{
+func NewBot(token string, uService *service.UserService) (*CommonBot, error) {
+	bt := &CommonBot{
 		cmn: common.New(uService),
 	}
 	api, err := maxbot.New(token)
@@ -38,36 +42,37 @@ func NewBot(token string, uService *service.UserService) (*Bot, error) {
 	return bt, nil
 }
 
-func (bt *Bot) Start(ctx context.Context) {
-	for upd := range bt.api.GetUpdates(ctx) {
-		switch upd := upd.(type) {
-		case *schemes.BotStartedUpdate: // Определение типа пришедшего обновления
-			bt.api.Messages.Send(ctx, maxbot.NewMessage().SetChat(upd.ChatId).SetText(common.AboutBot))
-		case *schemes.MessageCreatedUpdate:
-			handleFunc, ok := bt.commands[upd.GetCommand()]
-			if !ok {
-				if err := bt.handleTextMessage(ctx, upd); err != nil {
-					log.Println("error", err.Error())
-				}
-			} else {
-				if err := handleFunc(ctx, upd); err != nil {
-					log.Println("error", err.Error())
-				}
+func (bt *CommonBot) Handle(ctx context.Context, upd schemes.UpdateInterface) {
+	switch upd := upd.(type) {
+	case *schemes.BotStartedUpdate: // Определение типа пришедшего обновления
+		bt.api.Messages.Send(ctx, maxbot.NewMessage().SetChat(upd.ChatId).SetText(common.AboutBot))
+	case *schemes.MessageCreatedUpdate:
+		handleFunc, ok := bt.commands[upd.GetCommand()]
+		if !ok {
+			if err := bt.handleTextMessage(ctx, upd); err != nil {
+				log.Println("error", err.Error())
+			}
+		} else {
+			if err := handleFunc(ctx, upd); err != nil {
+				log.Println("error", err.Error())
 			}
 		}
 	}
-
 }
 
-func (bt *Bot) handleHelpCommand(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
+func (bt *CommonBot) Api() *maxbot.Api {
+	return bt.api
+}
+
+func (bt *CommonBot) handleHelpCommand(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
 	return bt.api.Messages.Send(ctx, maxbot.NewMessage().SetChat(msg.GetChatID()).SetText(common.Help))
 }
 
-func (bt *Bot) handleStartCommand(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
+func (bt *CommonBot) handleStartCommand(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
 	return bt.api.Messages.Send(ctx, maxbot.NewMessage().SetChat(msg.GetChatID()).SetText(common.AboutBot))
 }
 
-func (bt *Bot) handleTextMessage(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
+func (bt *CommonBot) handleTextMessage(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
 	chatId := msg.GetChatID()
 
 	var txt string
@@ -83,6 +88,7 @@ func (bt *Bot) handleTextMessage(ctx context.Context, msg *schemes.MessageCreate
 	var message *maxbot.Message
 
 	keyboard := bt.api.Messages.NewKeyboardBuilder()
+	maxbot.InlineKeyboard()
 	keyboard.AddRow().
 		AddMessage(common.HandleNameCalc).
 		AddMessage(common.HandleNameCalcAndSort)
@@ -94,15 +100,15 @@ func (bt *Bot) handleTextMessage(ctx context.Context, msg *schemes.MessageCreate
 	return bt.api.Messages.Send(ctx, message)
 }
 
-func (bt *Bot) handleCalculate(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
+func (bt *CommonBot) handleCalculate(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
 	return bt.calc(ctx, msg, false)
 }
 
-func (bt *Bot) handleCalculateAndSort(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
+func (bt *CommonBot) handleCalculateAndSort(ctx context.Context, msg *schemes.MessageCreatedUpdate) error {
 	return bt.calc(ctx, msg, true)
 }
 
-func (bt *Bot) calc(ctx context.Context, msg *schemes.MessageCreatedUpdate, sorted bool) error {
+func (bt *CommonBot) calc(ctx context.Context, msg *schemes.MessageCreatedUpdate, sorted bool) error {
 	chatId := msg.GetChatID()
 	res, err := bt.cmn.Calculate(ctx, strconv.FormatInt(msg.GetUserID(), 10), sorted)
 

@@ -4,21 +4,30 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
 	"os/signal"
 	"productsParser/internal/config"
 	"productsParser/internal/runner"
 	"syscall"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	token := flag.String("token", "", "token")
+	//token := flag.String("token", "", "token")
+	if err := godotenv.Load(); err != nil {
+		log.Println("Предупреждение: .env файл не найден, используются системные переменные")
+	}
 	isTg := flag.Bool("isTg", false, "is tgbot or maxbot")
+	isWebhook := flag.Bool("isWebhook", true, "is tgbot or maxbot")
 	timeout := flag.Duration("httpTimeout", time.Minute*2, "Таймаут HTTP соединений")
 
 	flag.Parse()
-
-	cfg := config.NewGlobalConfig(*isTg, *token, *timeout, true)
+	token := os.Getenv("TOKEN")
+	secret := os.Getenv("SECRET")
+	host := os.Getenv("HOST")
+	cfg := config.NewGlobalConfig(*isTg, *isWebhook, token, secret, host, *timeout, true)
 
 	gatewayApp, err := runner.NewApp(context.Background(), cfg)
 	if err != nil {

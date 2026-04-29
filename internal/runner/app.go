@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"productsParser/internal/application/maxbot"
+	longpolling "productsParser/internal/application/maxbot/longpolling"
+	"productsParser/internal/application/maxbot/webhook"
 	"productsParser/internal/application/telegrambot"
 	"productsParser/internal/config"
 	service "productsParser/internal/service/users"
@@ -20,7 +21,7 @@ type Bot interface {
 // Структура, реализующая запуск бинаринка
 type GatewayApp struct {
 	serviceProvider *serviceProvider
-	config          config.TgConfig
+	config          config.Config
 
 	b Bot
 
@@ -28,7 +29,7 @@ type GatewayApp struct {
 	ctx context.Context
 }
 
-func NewApp(ctx context.Context, config config.TgConfig) (*GatewayApp, error) {
+func NewApp(ctx context.Context, config config.Config) (*GatewayApp, error) {
 	app := &GatewayApp{
 		config: config,
 	}
@@ -89,9 +90,16 @@ func (a *GatewayApp) initBot(_ context.Context) error {
 			return err
 		}
 	} else {
-		b, err = maxbot.NewBot(a.serviceProvider.Config().Token(), userService)
-		if err != nil {
-			return err
+		if !a.config.IsWebhook() {
+			b, err = longpolling.New(a.serviceProvider.Config().Token(), userService)
+			if err != nil {
+				return err
+			}
+		} else {
+			b, err = webhook.New(a.serviceProvider.Config(), userService)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
