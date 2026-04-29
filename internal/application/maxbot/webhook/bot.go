@@ -3,7 +3,6 @@ package webhook
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"productsParser/internal/application/maxbot/common"
@@ -83,10 +82,6 @@ func (bt *Bot) Start(ctx context.Context) {
 		}
 	}
 
-}
-
-func requestHandler(ctx *fasthttp.RequestCtx) {
-	fmt.Fprintf(ctx, "Hello, world! Requested path is %q", ctx.Path())
 }
 
 func (bt *Bot) stop() {
