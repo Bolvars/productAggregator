@@ -1,3 +1,0 @@
-dns.name {
-    reverse_proxy bot:10888
-}
