@@ -39,8 +39,6 @@ func (bt *Bot) Start(ctx context.Context) {
 	for _, s := range subs.Subscriptions {
 		_, _ = bt.Api().Subscriptions.Unsubscribe(ctx, s.Url)
 	}
-	updateChan := make(chan schemes.UpdateInterface, 100)
-
 	webhookURL := bt.host + common.WebhookHandle
 	_, err := bt.Api().Subscriptions.Subscribe(ctx, webhookURL, []string{}, bt.secret)
 	if err != nil {
@@ -49,23 +47,14 @@ func (bt *Bot) Start(ctx context.Context) {
 	log.Printf("Webhook registered: %s", webhookURL)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/webhook", bt.Api().GetUpdateHandler(updateChan, bt.secret))
+	mux.HandleFunc("/webhook", bt.Api().GetUpdateHandlerFunc(func(ui schemes.UpdateInterface) {
+		bt.Handle(ctx, ui)
+	}, bt.secret))
 
 	bt.server = &http.Server{
 		Addr:    ":10888",
 		Handler: mux,
 	}
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case upd := <-updateChan:
-				bt.Handle(ctx, upd)
-			}
-		}
-	}()
 
 	log.Println("Starting Webhook server on :10888")
 	go func() {
