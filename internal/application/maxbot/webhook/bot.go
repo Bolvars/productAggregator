@@ -11,13 +11,11 @@ import (
 	"time"
 
 	"github.com/max-messenger/max-bot-api-client-go/schemes"
-	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
 type Bot struct {
 	*common.CommonBot
-	server *fasthttp.Server
+	server *http.Server
 	secret string
 	host   string
 }
@@ -30,8 +28,8 @@ func New(config config.Config, uService *service.UserService) (*Bot, error) {
 
 	return &Bot{
 		CommonBot: cmnBot,
-		host:      config.Host(),   // Например: https://mybot.com
-		secret:    config.Secret(), // Для проверки подлинности запросов
+		host:      config.Host(),
+		secret:    config.Secret(),
 	}, nil
 }
 
@@ -50,45 +48,41 @@ func (bt *Bot) Start(ctx context.Context) {
 	}
 	log.Printf("Webhook registered: %s", webhookURL)
 
-	fastHandler := fasthttpadaptor.NewFastHTTPHandlerFunc(bt.Api().GetUpdateHandler(updateChan, bt.secret))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/webhook", bt.Api().GetUpdateHandler(updateChan, bt.secret))
 
-	requestHandler := func(ctx *fasthttp.RequestCtx) {
-		switch string(ctx.Path()) {
-		case "/webhook":
-			fastHandler(ctx)
-		default:
-			ctx.Error("Not Found", fasthttp.StatusNotFound)
+	bt.server = &http.Server{
+		Addr:    ":10888",
+		Handler: mux,
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case upd := <-updateChan:
+				bt.Handle(ctx, upd)
+			}
 		}
-	}
-
-	bt.server = &fasthttp.Server{
-		Handler: requestHandler,
-	}
+	}()
 
 	log.Println("Starting Webhook server on :10888")
 	go func() {
-		if err := bt.server.ListenAndServe(":10888"); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := bt.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	for {
-		select {
-		case <-ctx.Done():
-			bt.stop()
-			return
-		case upd := <-updateChan:
-			bt.Handle(ctx, upd)
-		}
-	}
-
+	<-ctx.Done()
+	bt.stop()
 }
 
 func (bt *Bot) stop() {
 	if bt.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		bt.server.ShutdownWithContext(ctx)
+		bt.server.Shutdown(ctx)
 		log.Println("Webhook server stopped")
 	}
 }
