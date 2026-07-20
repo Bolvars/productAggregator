@@ -9,6 +9,7 @@ services:
       - TOKEN=твой_max_bot_token
       - SECRET=твой_секретный_ключ_для_webhook
       - HOST=https://duckdns.org
+      - URL="base.url.com"
     command: ["-isTg=false", "-isWebhook=true", "-httpTimeout=2m"]
     networks:
       - bot_network

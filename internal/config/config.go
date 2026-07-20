@@ -1,6 +1,8 @@
 package config
 
-import "time"
+import (
+	"time"
+)
 
 type Config interface {
 	TgBotEnabled() bool
@@ -10,6 +12,7 @@ type Config interface {
 	Host() string
 	InterruptTimeout() time.Duration
 	IsTildaParser() bool
+	DefaultURL() string
 }
 
 type GlobalConfig struct {
@@ -18,13 +21,14 @@ type GlobalConfig struct {
 	token              string
 	secret             string
 	host               string
+	defaultURL         string
 	interruptTimeout   time.Duration
 	tildaParserEnabled bool
 }
 
 func NewGlobalConfig(
 	tgEnabled, isWebhook bool,
-	token, secret, host string,
+	token, secret, host, defUrl string,
 	timeout time.Duration,
 	tildaParser bool,
 ) Config {
@@ -34,6 +38,7 @@ func NewGlobalConfig(
 		secret:             secret,
 		token:              token,
 		host:               host,
+		defaultURL:         defUrl,
 		interruptTimeout:   timeout,
 		tildaParserEnabled: tildaParser,
 	}
@@ -64,4 +69,8 @@ func (c *GlobalConfig) Secret() string {
 
 func (c *GlobalConfig) Host() string {
 	return c.host
+}
+
+func (c *GlobalConfig) DefaultURL() string {
+	return c.defaultURL
 }

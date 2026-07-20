@@ -19,6 +19,11 @@ FROM alpine:3.20
 
 # Устанавливаем сертификаты (обязательно для https-запросов к API)
 RUN apk add --no-cache ca-certificates
+# Копируем сертификат Минцифры в специальную папку Alpine для кастомных CA
+COPY ./russiantrustedca.crt /usr/local/share/ca-certificates/russiantrustedca.crt
+
+# Заставляем систему обновить главный бандл /etc/ssl/certs/ca-certificates.crt
+RUN update-ca-certificates
 
 WORKDIR /app
 COPY --from=builder /app/bot /app/bot
